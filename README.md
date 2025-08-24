@@ -183,4 +183,4 @@ tags: [recipe, cold]
 - Config centralized in `CONFIG`
 - Badges support **corner stacking** and **ordering**
 - Boolean filters are declarative
-```
+
