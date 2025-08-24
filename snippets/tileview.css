@@ -1,0 +1,162 @@
+/* ================= TileView — Generic Styles ================= */
+
+/* Quick theming via CSS variables */
+:root {
+    --tv-gap: 16px;
+    --tv-card-radius: 12px;
+    --tv-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+    --tv-footer-bg: rgba(0, 0, 0, 0.7);
+    --tv-footer-fg: #fff;
+    --tv-footer-muted: #ccc;
+
+    --tv-badge-bg: #444;
+    --tv-badge-fg: #fff;
+
+    --tv-accent: #2a7ae2;
+}
+
+/* Grid */
+.tv-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--tv-gap);
+    margin-top: 1em;
+}
+
+/* Link wrapper */
+.tv-cardlink {
+    display: inline-block;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Card */
+.tv-card {
+    position: relative;
+    border-radius: var(--tv-card-radius);
+    overflow: hidden;
+    box-shadow: var(--tv-shadow);
+}
+
+/* Media */
+.tv-media {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.tv-media video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--tv-card-radius);
+}
+
+/* Footer */
+.tv-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 6px 10px;
+    background: var(--tv-footer-bg);
+    color: var(--tv-footer-fg);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.tv-title {
+    font-weight: 700;
+    font-size: 1.05em;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.tv-subtitle {
+    font-weight: 500;
+    font-size: 0.75em;
+    color: var(--tv-footer-muted);
+}
+
+/* Badge layer */
+.tv-badges {
+    position: absolute;
+    inset: 0;
+    pointer-events: none; /* pass clicks through */
+}
+
+/* Corner containers: stacked columns with gap (set by inline style) */
+.tv-badges-corner {
+    position: absolute;
+    display: flex;
+    align-items: flex-start; /* overridden for right corners below */
+}
+
+/* Corner anchors */
+.tv-badges-tl { top: 8px;  left: 8px;  }
+.tv-badges-tr { top: 8px;  right: 8px; align-items: flex-end; }
+.tv-badges-bl { bottom: 8px; left: 8px; }
+.tv-badges-br { bottom: 8px; right: 8px; align-items: flex-end; }
+
+/* Individual badge */
+.tv-badge {
+    background: var(--tv-badge-bg, #444);
+    color: var(--tv-badge-fg, #fff);
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    font-weight: 600;
+    pointer-events: auto; /* enable hover if you add titles/tooltips later */
+}
+
+/* Filter bar */
+.tv-filterbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.tv-filterbar .tv-filtergroup strong {
+    color: var(--tv-accent);
+}
+
+.tv-filtergroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+}
+
+.tv-filteroptions {
+    display: flex;
+    flex-direction: column;  /* stack vertically */
+    gap: 0.4em;              /* vertical spacing between checkboxes */
+}
+
+
+.tv-filteroption {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    font-weight: 500;
+}
+
+/* Optional state classes if you want extra highlighting rules later */
+.tv-cardlink.is-positive .tv-card {
+    border: 4px solid #3399ff;
+    box-shadow: 0 0 10px rgba(51, 153, 255, 0.6);
+    border-radius: calc(var(--tv-card-radius) + 4px);
+}
+
+.tv-cardlink.is-negative .tv-card {
+    border: 4px solid #ff4d4d;
+    box-shadow: 0 0 10px rgba(255, 77, 77, 0.6);
+    border-radius: calc(var(--tv-card-radius) + 4px);
+}
