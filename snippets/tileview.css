@@ -14,6 +14,10 @@
     --tv-badge-fg: #fff;
 
     --tv-accent: #2a7ae2;
+
+    /* Pagination configuration - adjust based on device capabilities */
+    --tv-tiles-per-page: 20; /* Number of tiles to show per page */
+    --tv-scroll-threshold: 200; /* Pixels from edge to trigger page load */
 }
 
 /* Grid */
@@ -23,6 +27,20 @@
     justify-content: space-between;
     gap: var(--tv-gap);
     margin-top: 1em;
+}
+
+/* Page containers for pagination */
+.tv-page {
+    display: contents; /* Makes the page container transparent for flex layout */
+}
+
+/* Loading indicator */
+.tv-loading {
+    width: 100%;
+    text-align: center;
+    padding: 1rem;
+    color: var(--tv-accent);
+    font-weight: 500;
 }
 
 /* Link wrapper */
