@@ -88,6 +88,13 @@ const CONFIG = {
   autoplayVideo: true,
   fallbackMedia: "fallback.png",
   tileSize: { width: 300, height: 225 },
+
+  // Pagination settings
+  pagination: {
+    enabled: true,
+    tilesPerPageCSSVar: "--tv-tiles-per-page", // CSS variable name
+    defaultTilesPerPage: 20, // Fallback if CSS var not available
+  },
 };
 ```
 
@@ -117,8 +124,18 @@ In `tileview.css`, adjust variables:
   --tv-badge-bg: #444;
   --tv-badge-fg: #fff;
   --tv-accent: #2a7ae2;
+  
+  /* Pagination settings - device dependent */
+  --tv-tiles-per-page: 20; /* Adjust based on device capability */
 }
 ```
+
+The CSS also includes device-responsive defaults:
+- **Desktop**: 20 tiles per page (default)
+- **Tablet** (≤768px): 12 tiles per page
+- **Mobile** (≤480px): 8 tiles per page
+
+You can override `--tv-tiles-per-page` to customize pagination for your device's performance needs.
 
 ---
 
@@ -148,7 +165,43 @@ tags: [recipe, cold]
 
 ---
 
-## 7) Common Customizations
+## 7) Pagination & Performance
+
+**TileView now includes built-in pagination** to handle large collections efficiently, especially on mobile devices.
+
+### Features
+- **Device-responsive tile limits** via CSS variables
+- **Page navigation** with Previous/Next buttons
+- **Direct page access** with numbered page buttons
+- **Item count display** (e.g., "1-20 of 156 items")
+- **Filter integration** - pagination resets when filters change
+
+### Configuration
+Set the tiles per page in your CSS:
+```css
+:root {
+  --tv-tiles-per-page: 15; /* Custom limit */
+}
+```
+
+Or disable pagination entirely:
+```js
+const CONFIG = {
+  // ... other settings
+  pagination: {
+    enabled: false, // Disable pagination
+  },
+};
+```
+
+### Default Limits
+- **Desktop**: 20 tiles per page
+- **Tablet** (≤768px): 12 tiles per page  
+- **Mobile** (≤480px): 8 tiles per page
+
+---
+
+## 8) Common Customizations
 
 - New boolean filter:
   ```js
@@ -156,31 +209,35 @@ tags: [recipe, cold]
   ```
 - Change tile size: `tileSize: { width: 360, height: 240 }`
 - Badge coloring: see `styleMaps`
+- Custom pagination: `--tv-tiles-per-page: 25`
 
 ---
 
-## 8) Troubleshooting
+## 9) Troubleshooting
 
 - **No tiles show** → check `sourcePath` and YAML fields.
 - **Badges not appearing** → ensure field exists or use `label(page)`.
 - **Filters odd with lists** → fields are joined by default, tokenize if needed.
 - **Video doesn’t autoplay** → some platforms block autoplay; toggle `autoplayVideo: false`.
+- **Too many tiles crash mobile** → reduce `--tv-tiles-per-page` in CSS.
 
 ---
 
-## 9) How It Works
+## 10) How It Works
 
 - Groups by `groupBy` → picks latest per group.
 - Collects unique values from `filters` → renders checkboxes.
 - Applies **facet** filters (datasets) + **boolean** filters (ctx logic).
+- **Paginates results** to prevent performance issues on mobile.
 - Builds tiles with image/video, badges, footer.
 
 ---
 
-## 10) Upgrading From Older Versions
+## 11) Upgrading From Older Versions
 
 - Class names unified as `.tv-*`
 - Config centralized in `CONFIG`
 - Badges support **corner stacking** and **ordering**
 - Boolean filters are declarative
+- **NEW**: Pagination system for large collections
 
