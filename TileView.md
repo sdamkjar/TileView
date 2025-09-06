@@ -52,6 +52,13 @@ const CONFIG = {
   autoplayVideo: true,
   fallbackMedia: "fallback.png",
   tileSize: { width: 300, height: 225 },
+
+  // Pagination settings
+  pagination: {
+    enabled: true,
+    tilesPerPageCSSVar: "--tv-tiles-per-page", // CSS variable name
+    defaultTilesPerPage: 20, // Fallback if CSS var not available
+  },
 };
 // =================== END CONFIG ===================
 
@@ -101,6 +108,53 @@ const normalizeTagsToSet = (tags) => {
   if (Array.isArray(tags)) return new Set(tags.map((t) => String(t).toLowerCase()));
   if (typeof tags === "string") return new Set(tags.split(/[,\s]+/).filter(Boolean).map((t) => t.toLowerCase()));
   return new Set();
+};
+
+// ---------- pagination helpers ----------
+const getTilesPerPage = () => {
+  if (!CONFIG.pagination.enabled) return Number.MAX_SAFE_INTEGER;
+  
+  // Get value from CSS custom property
+  const cssValue = getComputedStyle(document.documentElement)
+    .getPropertyValue(CONFIG.pagination.tilesPerPageCSSVar)
+    .trim();
+  
+  const parsed = parseInt(cssValue, 10);
+  return isNaN(parsed) || parsed <= 0 
+    ? CONFIG.pagination.defaultTilesPerPage 
+    : parsed;
+};
+
+const createPaginationState = (totalItems) => {
+  const tilesPerPage = getTilesPerPage();
+  const totalPages = Math.ceil(totalItems / tilesPerPage);
+  
+  return {
+    currentPage: 1,
+    tilesPerPage,
+    totalPages,
+    totalItems,
+    getPageItems: (items) => {
+      const start = (this.currentPage - 1) * this.tilesPerPage;
+      const end = start + this.tilesPerPage;
+      return items.slice(start, end);
+    },
+    setPage: function(page) {
+      this.currentPage = Math.max(1, Math.min(page, this.totalPages));
+    },
+    nextPage: function() { 
+      this.setPage(this.currentPage + 1); 
+    },
+    prevPage: function() { 
+      this.setPage(this.currentPage - 1); 
+    },
+    hasNext: function() { 
+      return this.currentPage < this.totalPages; 
+    },
+    hasPrev: function() { 
+      return this.currentPage > 1; 
+    },
+  };
 };
 
 
@@ -157,6 +211,14 @@ dv.container.innerHTML = `
     </div>
   </div>
   <div class="tv-grid"></div>
+  ${CONFIG.pagination.enabled ? `
+    <div class="tv-pagination">
+      <button class="tv-pagination-btn" id="tv-prev-btn" type="button">Previous</button>
+      <div class="tv-pagination-pages" id="tv-pagination-pages"></div>
+      <button class="tv-pagination-btn" id="tv-next-btn" type="button">Next</button>
+      <div class="tv-pagination-info" id="tv-pagination-info"></div>
+    </div>
+  ` : ''}
 `;
 
 
@@ -165,6 +227,10 @@ dv.container.innerHTML = `
 const grid = dv.container.querySelector(".tv-grid");
 const vault = app.vault.getName();
 const cardCtx = new WeakMap();
+const allCards = []; // Store all cards for pagination
+
+// Initialize pagination state
+let state = createPaginationState(items.length);
 
 for (const page of items) {
   const title = getFieldValue(page, "title") ?? page.file.name;
@@ -237,30 +303,121 @@ for (const page of items) {
       </div>
     </div>
   `;
-  grid.appendChild(a);
+  
+  // Store card instead of immediately appending
+  allCards.push(a);
 }
 
 
 
-// ---------- filtering ----------
-function applyFilters() {
+// ---------- pagination functions ----------
+function updatePaginationUI() {
+  if (!CONFIG.pagination.enabled) return;
+  
+  const prevBtn = document.getElementById("tv-prev-btn");
+  const nextBtn = document.getElementById("tv-next-btn");
+  const pagesContainer = document.getElementById("tv-pagination-pages");
+  const infoElement = document.getElementById("tv-pagination-info");
+  
+  if (!prevBtn || !nextBtn || !pagesContainer || !infoElement) return;
+  
+  // Update buttons
+  prevBtn.disabled = !state.hasPrev();
+  nextBtn.disabled = !state.hasNext();
+  
+  // Update page numbers (show max 5 pages around current)
+  const maxPageButtons = 5;
+  const startPage = Math.max(1, state.currentPage - Math.floor(maxPageButtons / 2));
+  const endPage = Math.min(state.totalPages, startPage + maxPageButtons - 1);
+  
+  pagesContainer.innerHTML = '';
+  
+  for (let i = startPage; i <= endPage; i++) {
+    const pageBtn = document.createElement('button');
+    pageBtn.className = `tv-pagination-page ${i === state.currentPage ? 'active' : ''}`;
+    pageBtn.textContent = i;
+    pageBtn.onclick = () => goToPage(i);
+    pagesContainer.appendChild(pageBtn);
+  }
+  
+  // Update info
+  const startItem = (state.currentPage - 1) * state.tilesPerPage + 1;
+  const endItem = Math.min(state.currentPage * state.tilesPerPage, state.totalItems);
+  infoElement.textContent = `${startItem}-${endItem} of ${state.totalItems} items`;
+}
+
+function renderCurrentPage() {
+  // Clear grid
+  grid.innerHTML = '';
+  
+  // Get filtered cards
+  const visibleCards = getFilteredCards();
+  
+  // Update pagination state with current filtered count
+  state = createPaginationState(visibleCards.length);
+  state.currentPage = Math.min(state.currentPage, state.totalPages || 1);
+  
+  // Get cards for current page
+  const pageCards = state.getPageItems(visibleCards);
+  
+  // Append cards to grid
+  pageCards.forEach(card => grid.appendChild(card));
+  
+  // Update pagination UI
+  updatePaginationUI();
+}
+
+function getFilteredCards() {
   const activeFacets = {};
   for (const f of CONFIG.filters) {
     activeFacets[f] = Array.from(document.querySelectorAll(`.tv-filter-${f}:checked`))
       .map(cb => cb.value.toLowerCase());
   }
   const activeBools = CONFIG.booleanFilters.filter(b => document.getElementById(`tv-bool-${b.id}`)?.checked);
-
-  for (const card of document.querySelectorAll(".tv-cardlink")) {
+  
+  return allCards.filter(card => {
     const facetPass = CONFIG.filters.every(f => activeFacets[f].includes(card.dataset[f]));
     const ctx = cardCtx.get(card) || {};
     const boolPass = activeBools.every(b => { try { return b.when(ctx); } catch { return true; } });
-    card.style.display = (facetPass && boolPass) ? "inline-block" : "none";
-  }
+    return facetPass && boolPass;
+  });
 }
+
+function goToPage(page) {
+  state.setPage(page);
+  renderCurrentPage();
+}
+
+function setupPaginationEventListeners() {
+  if (!CONFIG.pagination.enabled) return;
+  
+  const prevBtn = document.getElementById("tv-prev-btn");
+  const nextBtn = document.getElementById("tv-next-btn");
+  
+  if (prevBtn) prevBtn.addEventListener("click", () => {
+    state.prevPage();
+    renderCurrentPage();
+  });
+  
+  if (nextBtn) nextBtn.addEventListener("click", () => {
+    state.nextPage();
+    renderCurrentPage();
+  });
+}
+
+// ---------- filtering ----------
+function applyFilters() {
+  // Reset to page 1 when filters change
+  state.currentPage = 1;
+  renderCurrentPage();
+}
+
 CONFIG.filters.forEach(f => document.querySelectorAll(`.tv-filter-${f}`).forEach(cb => cb.addEventListener("change", applyFilters)));
 CONFIG.booleanFilters.forEach(b => document.getElementById(`tv-bool-${b.id}`)?.addEventListener("change", applyFilters));
-applyFilters();
+
+// Initial setup
+setupPaginationEventListeners();
+renderCurrentPage();
 
 
 
