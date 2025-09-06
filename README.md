@@ -102,7 +102,43 @@ const CONFIG = {
 
 ---
 
-## 5) Theming & Styling
+## 5) Pagination & Performance
+
+TileView includes **infinite scroll pagination** to handle large collections efficiently, especially on mobile devices.
+
+### Configuration
+
+Adjust pagination settings in your CSS snippet:
+
+```css
+:root {
+  --tv-tiles-per-page: 20;    /* Number of tiles per page (adjust for device) */
+  --tv-scroll-threshold: 200; /* Pixels from edge to trigger loading */
+}
+```
+
+### How It Works
+
+- **Virtual Scrolling**: Only 2 pages maximum are rendered at once (current + 1 adjacent)
+- **Infinite Scroll**: Pages load automatically as you scroll
+- **Memory Management**: Previous pages are removed when scrolling forward
+- **Seamless Experience**: Content appears continuously without pagination buttons
+
+### Device Optimization
+
+**Mobile devices** should use smaller page sizes:
+```css
+--tv-tiles-per-page: 10;  /* Fewer tiles for mobile */
+```
+
+**Desktop** can handle larger pages:
+```css
+--tv-tiles-per-page: 50;  /* More tiles for desktop */
+```
+
+---
+
+## 6) Theming & Styling
 
 In `tileview.css`, adjust variables:
 
@@ -122,7 +158,7 @@ In `tileview.css`, adjust variables:
 
 ---
 
-## 6) Examples
+## 7) Examples
 
 ### A. LoRA Catalog
 ```yaml
@@ -148,7 +184,7 @@ tags: [recipe, cold]
 
 ---
 
-## 7) Common Customizations
+## 8) Common Customizations
 
 - New boolean filter:
   ```js
@@ -159,7 +195,7 @@ tags: [recipe, cold]
 
 ---
 
-## 8) Troubleshooting
+## 9) Troubleshooting
 
 - **No tiles show** → check `sourcePath` and YAML fields.
 - **Badges not appearing** → ensure field exists or use `label(page)`.
@@ -168,19 +204,29 @@ tags: [recipe, cold]
 
 ---
 
-## 9) How It Works
+## 10) How It Works
 
 - Groups by `groupBy` → picks latest per group.
 - Collects unique values from `filters` → renders checkboxes.
 - Applies **facet** filters (datasets) + **boolean** filters (ctx logic).
+- **Pagination**: Splits items into pages, renders 2 pages max, infinite scroll.
 - Builds tiles with image/video, badges, footer.
 
 ---
 
-## 10) Upgrading From Older Versions
+## 11) Upgrading From Older Versions
 
 - Class names unified as `.tv-*`
 - Config centralized in `CONFIG`
 - Badges support **corner stacking** and **ordering**
 - Boolean filters are declarative
+- **NEW**: Pagination system for large collections
+
+### Pagination Migration
+
+If upgrading from a previous version, the pagination system is **automatically enabled**. You can:
+
+1. **Adjust page size** by setting `--tv-tiles-per-page` in your CSS
+2. **Disable pagination** by setting `--tv-tiles-per-page: 999999` (render all at once)
+3. **Tune performance** with `--tv-scroll-threshold` (lower = more responsive, higher = less CPU usage)
 
