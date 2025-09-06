@@ -282,31 +282,42 @@ const renderPage = async (pageNum) => {
   const pageItems = PAGINATION.pageItems.get(pageNum);
   if (!pageItems || pageItems.length === 0) return;
   
+  // Show loading indicator
   loadingEl.style.display = "block";
   
-  // Create page container
-  const pageContainer = document.createElement("div");
-  pageContainer.className = "tv-page";
-  pageContainer.dataset.page = pageNum;
-  
-  // Render tiles for this page
-  for (const page of pageItems) {
-    const tileElement = await createTileElement(page);
-    pageContainer.appendChild(tileElement);
+  try {
+    // Create page container
+    const pageContainer = document.createElement("div");
+    pageContainer.className = "tv-page";
+    pageContainer.dataset.page = pageNum;
+    
+    // Render tiles for this page
+    const tilePromises = pageItems.map(page => createTileElement(page));
+    const tileElements = await Promise.all(tilePromises);
+    
+    tileElements.forEach(tileElement => {
+      pageContainer.appendChild(tileElement);
+    });
+    
+    // Insert page in correct position
+    const existingPages = Array.from(grid.querySelectorAll('.tv-page'));
+    const insertIndex = existingPages.findIndex(p => parseInt(p.dataset.page) > pageNum);
+    
+    if (insertIndex === -1) {
+      grid.appendChild(pageContainer);
+    } else {
+      grid.insertBefore(pageContainer, existingPages[insertIndex]);
+    }
+    
+    PAGINATION.visiblePages.add(pageNum);
+    console.log(`TileView: Rendered page ${pageNum} with ${pageItems.length} items`);
+    
+  } catch (error) {
+    console.error(`TileView: Error rendering page ${pageNum}:`, error);
+  } finally {
+    // Hide loading indicator
+    loadingEl.style.display = "none";
   }
-  
-  // Insert page in correct position
-  const existingPages = Array.from(grid.querySelectorAll('.tv-page'));
-  const insertIndex = existingPages.findIndex(p => parseInt(p.dataset.page) > pageNum);
-  
-  if (insertIndex === -1) {
-    grid.appendChild(pageContainer);
-  } else {
-    grid.insertBefore(pageContainer, existingPages[insertIndex]);
-  }
-  
-  PAGINATION.visiblePages.add(pageNum);
-  loadingEl.style.display = "none";
 };
 
 const removePage = (pageNum) => {
@@ -341,30 +352,59 @@ const updateVisiblePages = async () => {
   }
 };
 
-const handleScroll = () => {
-  // Get the scroll container - could be the preview pane or window
-  const scrollContainer = grid.closest('.markdown-preview-view') || grid.closest('.markdown-rendered') || document.documentElement;
-  const scrollTop = scrollContainer.scrollTop;
-  const scrollHeight = scrollContainer.scrollHeight;
-  const clientHeight = scrollContainer.clientHeight;
+const handleScroll = (() => {
+  let isHandling = false;
+  let timeoutId = null;
   
-  const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-  const distanceFromTop = scrollTop;
-  
-  const maxPage = Math.max(0, PAGINATION.pageItems.size - 1);
-  
-  // Check if we need to load next page
-  if (distanceFromBottom < PAGINATION.scrollThreshold && PAGINATION.currentPage < maxPage) {
-    PAGINATION.currentPage++;
-    updateVisiblePages();
-  }
-  
-  // Check if we need to load previous page
-  if (distanceFromTop < PAGINATION.scrollThreshold && PAGINATION.currentPage > 0) {
-    PAGINATION.currentPage--;
-    updateVisiblePages();
-  }
-};
+  return () => {
+    // Debounce scroll events
+    if (timeoutId) clearTimeout(timeoutId);
+    
+    timeoutId = setTimeout(() => {
+      if (isHandling) return;
+      isHandling = true;
+      
+      try {
+        // Get the scroll container - could be the preview pane or window
+        const scrollContainer = grid.closest('.markdown-preview-view') || grid.closest('.markdown-rendered') || document.documentElement;
+        const scrollTop = scrollContainer.scrollTop || 0;
+        const scrollHeight = scrollContainer.scrollHeight || 0;
+        const clientHeight = scrollContainer.clientHeight || 0;
+        
+        // Validate scroll values
+        if (scrollHeight === 0 || clientHeight === 0) {
+          isHandling = false;
+          return;
+        }
+        
+        const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+        const distanceFromTop = scrollTop;
+        
+        const maxPage = Math.max(0, PAGINATION.pageItems.size - 1);
+        const currentPage = PAGINATION.currentPage;
+        
+        // Check if we need to load next page
+        if (distanceFromBottom < PAGINATION.scrollThreshold && currentPage < maxPage) {
+          console.log(`TileView: Loading next page (${currentPage + 1}), distance from bottom: ${distanceFromBottom}`);
+          PAGINATION.currentPage++;
+          updateVisiblePages();
+        }
+        
+        // Check if we need to load previous page  
+        else if (distanceFromTop < PAGINATION.scrollThreshold && currentPage > 0) {
+          console.log(`TileView: Loading previous page (${currentPage - 1}), distance from top: ${distanceFromTop}`);
+          PAGINATION.currentPage--;
+          updateVisiblePages();
+        }
+        
+      } catch (error) {
+        console.error('TileView: Scroll handling error:', error);
+      } finally {
+        isHandling = false;
+      }
+    }, 100); // 100ms debounce
+  };
+})();
 
 // ---------- filtering with pagination ----------
 const applyFiltersWithPagination = () => {
